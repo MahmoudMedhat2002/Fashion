@@ -55,6 +55,16 @@ namespace Fashion.Services
 			return new ServiceResponse<List<CartItem>> { Data = cartItems };
 		}
 
+		public async Task<ServiceResponse<decimal>> GetTotalPrice()
+		{
+			var cartItems = (await GetCartItems()).Data;
+			decimal totalPrice = 0;
+
+			cartItems.ForEach(ci => totalPrice += (ci.Product.Price * ci.Quantity));
+
+			return new ServiceResponse<decimal> { Data = totalPrice };
+		}
+
 		public async Task<ServiceResponse<List<CartItem>>> RemoveFromCart(int productId)
 		{
 			var userId = _authService.GetUserId();

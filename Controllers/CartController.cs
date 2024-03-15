@@ -22,6 +22,12 @@ namespace Fashion.Controllers
 			var response = await _cartService.GetCartItems();
 			return Ok(response);
 		}
+		[HttpGet("totalprice")]
+		public async Task<IActionResult> GetTotalPrice()
+		{
+			var response = await _cartService.GetTotalPrice();
+			return Ok(response);
+		}
 		[HttpPost("addtocart/{productId}")]
 		public async Task<IActionResult> AddToCart(int productId)
 		{
