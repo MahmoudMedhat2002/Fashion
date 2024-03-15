@@ -47,6 +47,7 @@ namespace Fashion
 			builder.Services.AddScoped<ICategoryService , CategoryService>();
 			builder.Services.AddScoped<IAuthService , AuthService>();
 			builder.Services.AddScoped<ICartService , CartService>();
+			builder.Services.AddScoped<IOrderService , OrderService>();
 
 			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 			builder.Services.AddEndpointsApiExplorer();

@@ -6,6 +6,7 @@ namespace Fashion.Services
 	{
 		Task<AuthModel> Register(RegisterModel model);
 		Task<AuthModel> GetToken(TokenRequestModel model);
+		Task<string> AddToRole(AddRoleModel model);
 		string GetUserId();
 	}
 }

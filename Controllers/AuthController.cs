@@ -52,5 +52,12 @@ namespace Fashion.Controllers
 			var result = _authService.GetUserId();
 			return Ok(result);
 		}
+
+		[HttpPost("addrole")]
+		public async Task<IActionResult> AddToRole(AddRoleModel model)
+		{
+			var response = await _authService.AddToRole(model);
+			return Ok(response);
+		}
 	}
 }

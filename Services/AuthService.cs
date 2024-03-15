@@ -24,6 +24,21 @@ namespace Fashion.Services
 			_jwt = jwt.Value;
         }
 
+		public async Task<string> AddToRole(AddRoleModel model)
+		{
+			var user = await _userManager.FindByIdAsync(model.UserId);
+
+			if (user is null)
+				return "User Not Found";
+
+			if (await _roleManager.FindByNameAsync(model.Role) is null)
+				return $"There is no role with {model.Role} name";
+
+			await _userManager.AddToRoleAsync(user, model.Role);
+
+			return "Role added Success";
+		}
+
 		public async Task<AuthModel> GetToken(TokenRequestModel model)
 		{
 			var result = new AuthModel();

@@ -55,6 +55,13 @@ namespace Fashion.Services
 			return new ServiceResponse<List<CartItem>> { Data = cartItems };
 		}
 
+		public async Task<ServiceResponse<int>> GetCartItemsCount()
+		{
+			var count = (await GetCartItems()).Data.Count;
+			return new ServiceResponse<int> { Data = count };
+
+		}
+
 		public async Task<ServiceResponse<decimal>> GetTotalPrice()
 		{
 			var cartItems = (await GetCartItems()).Data;
