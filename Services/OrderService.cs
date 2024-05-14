@@ -45,6 +45,11 @@ namespace Fashion.Services
 				});
 
 				totalPrice += ci.Quantity * ci.Product.Price;
+
+				if (ci.Quantity > ci.Product.StockQuantity)
+					return new ServiceResponse<bool> { Message = $"There is not enough amount for this {ci.Product.Title}", Success = false };
+
+				ci.Product.StockQuantity -= ci.Quantity;
 			}
 
 			

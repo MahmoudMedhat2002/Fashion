@@ -43,9 +43,21 @@ namespace Fashion.Controllers
 			return Ok(response);
 		}
 		[HttpDelete("{productId}")]
-		public async Task<IActionResult> UpdateProduct(int productId)
+		public async Task<IActionResult> DeleteProduct(int productId)
 		{
 			var response = await _productService.DeleteProduct(productId);
+			return Ok(response);
+		}
+		[HttpGet("GetProduct/{productId}")]
+		public async Task<IActionResult> GetProductById(int productId)
+		{
+			var response = await _productService.GetProductById(productId);
+			return Ok(response);
+		}
+		[HttpPut("{productId}/{stockQuantity}")]
+		public async Task<IActionResult> AddStockQuantityToProduct(int productId , int stockQuantity)
+		{
+			var response = await _productService.AddStockQuantityToProduct(productId , stockQuantity);
 			return Ok(response);
 		}
 	}

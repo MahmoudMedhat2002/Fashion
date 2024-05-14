@@ -24,6 +24,22 @@ namespace Fashion.Services
 			return new ServiceResponse<List<Product>>() { Success = false };
 		}
 
+		public async Task<ServiceResponse<bool>> AddStockQuantityToProduct(int productId, int quantity)
+		{
+			var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId);
+
+			if(product == null)
+				return new ServiceResponse<bool> { Success = false , Message = "Product not found"};
+
+			if(quantity <= 0)
+				return new ServiceResponse<bool> { Success = false, Message = "not valid quantity" };
+
+			product.StockQuantity += quantity;
+			await _context.SaveChangesAsync();
+
+			return new ServiceResponse<bool> { Data = true, Message = "stock quantity added successfully" };
+		}
+
 		public async Task<ServiceResponse<bool>> DeleteProduct(int productId)
 		{
 			var product = await _context.Products.FindAsync(productId);
@@ -46,6 +62,16 @@ namespace Fashion.Services
 		{
 			var products = await _context.Products.Include(p => p.Category).ToListAsync();
 			return new ServiceResponse<List<Product>> { Data = products };
+		}
+
+		public async Task<ServiceResponse<Product>> GetProductById(int id)
+		{
+			var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.Id == id);
+
+			if (product == null)
+				return new ServiceResponse<Product> { Success = false, Message = "Product not found!!!" };
+
+			return new ServiceResponse<Product> { Data = product };
 		}
 
 		public async Task<ServiceResponse<List<Product>>> UpdateProduct(Product product)

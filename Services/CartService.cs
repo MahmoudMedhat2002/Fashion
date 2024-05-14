@@ -37,6 +37,9 @@ namespace Fashion.Services
 			}
 			else
 			{
+				if (sameitem.Quantity + 1 > sameitem.Product.StockQuantity)
+					return new ServiceResponse<List<CartItem>> { Success = false, Message = "There is not enough amout for this item" };
+
 				sameitem.Quantity++;
 			}
 
