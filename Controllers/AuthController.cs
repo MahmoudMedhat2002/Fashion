@@ -3,6 +3,7 @@ using Fashion.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NuGet.Protocol;
 
 namespace Fashion.Controllers
 {
@@ -28,7 +29,9 @@ namespace Fashion.Controllers
 			if (!result.IsAuthenticated)
 				return BadRequest(result.Message);
 
-			return Ok(result);
+            SetRefreshTokenInCookies(result.RefreshToken, result.RefreshTokenExpiration);
+
+            return Ok(result);
 		}
 
 		[HttpPost("token")]
@@ -41,6 +44,9 @@ namespace Fashion.Controllers
 
 			if (!result.IsAuthenticated)
 				return BadRequest(result.Message);
+
+			if (!string.IsNullOrEmpty(result.RefreshToken))
+				SetRefreshTokenInCookies(result.RefreshToken, result.RefreshTokenExpiration);
 
 			return Ok(result);
 		}
@@ -58,6 +64,44 @@ namespace Fashion.Controllers
 		{
 			var response = await _authService.AddToRole(model);
 			return Ok(response);
+		}
+		[HttpGet("refresh-token")]
+        public async Task<IActionResult> RefreshToken()
+        {
+			var refreshToken = Request.Cookies["refreshToken"];
+			var result = await _authService.RefreshTokenAsync(refreshToken);
+
+			if(!result.IsAuthenticated)
+				return BadRequest(result);
+
+            SetRefreshTokenInCookies(result.RefreshToken , result.RefreshTokenExpiration);
+            return Ok(result);
+        }
+
+        [HttpPost("revoke-refresh-token")]
+        public async Task<IActionResult> RevokeRefreshToken(string? token)
+        {
+			var actualToken = token ?? Request.Cookies["refreshToken"];
+			if (string.IsNullOrEmpty(actualToken))
+				return BadRequest("Token is required");
+
+			var result = await _authService.RevokeRefreshToken(actualToken);
+
+			if(!result)
+				return BadRequest("Token is Invalid");
+
+			return Ok(result);
+        }
+
+        private void SetRefreshTokenInCookies(string refreshToken , DateTime expires)
+		{
+			var cookieOptions = new CookieOptions
+			{
+				HttpOnly = true,
+				Expires = expires.ToLocalTime()
+			};
+
+			Response.Cookies.Append("refreshToken", refreshToken , cookieOptions);
 		}
 	}
 }

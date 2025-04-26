@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 
 namespace Fashion.Services
 {
@@ -57,9 +59,24 @@ namespace Fashion.Services
 			result.IsAuthenticated = true;
 			result.Token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 			result.Email = model.Email;
-			result.ExpiresOn = jwtToken.ValidTo;
+			//result.ExpiresOn = jwtToken.ValidTo;
 			result.UserName = user.UserName;
 			result.Roles = rolesList.ToList();
+
+			if(user.RefreshTokens.Any(r => r.IsActive))
+			{
+				var activeRefreshToken = user.RefreshTokens.FirstOrDefault(r => r.IsActive);
+				result.RefreshToken = activeRefreshToken.Token;
+				result.RefreshTokenExpiration = activeRefreshToken.ExpiresOn;
+            }
+			else
+			{
+				var refreshToken = GenerateRefreshToken();
+                result.RefreshToken = refreshToken.Token;
+                result.RefreshTokenExpiration = refreshToken.ExpiresOn;
+				user.RefreshTokens.Add(refreshToken);
+				await _userManager.UpdateAsync(user);
+            }
 
 			return result;	
 		}
@@ -69,7 +86,51 @@ namespace Fashion.Services
 			return _httpContextAccessor.HttpContext.User.FindFirstValue("uid");
 		}
 
-		public async Task<AuthModel> Register(RegisterModel model)
+        public async Task<AuthModel> RefreshTokenAsync(string refreshToken)
+        {
+			var authModel = new AuthModel();
+
+			var user = await _userManager.Users.SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+
+			if(user == null)
+			{
+				authModel.IsAuthenticated = false;
+				authModel.Message = "Invalid Token";
+				return authModel;
+			}
+
+			var token = user.RefreshTokens.Single(r => r.Token == refreshToken);
+
+			if(!token.IsActive)
+			{
+                authModel.IsAuthenticated = false;
+                authModel.Message = "Inactive Token";
+                return authModel;
+            }
+
+			token.RevokedOn = DateTime.UtcNow;
+
+			var newRefreshToken = GenerateRefreshToken();
+			user.RefreshTokens.Add(newRefreshToken);
+
+			await _userManager.UpdateAsync(user);
+
+			var jwtToken = await CreateJwtToken(user);
+
+			return new AuthModel
+			{
+				IsAuthenticated = true,
+				Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+				Email = user.Email,
+				UserName = user.UserName,
+				Roles = (await _userManager.GetRolesAsync(user)).ToList(),
+				RefreshToken = newRefreshToken.Token,
+				RefreshTokenExpiration = newRefreshToken.ExpiresOn
+            };
+
+        }
+
+        public async Task<AuthModel> Register(RegisterModel model)
 		{
 			if(await _userManager.FindByEmailAsync(model.Email) is not null)
 			{
@@ -109,7 +170,7 @@ namespace Fashion.Services
 			return new AuthModel
 			{
 				Email = user.Email,
-				ExpiresOn = jwtToken.ValidTo,
+				//ExpiresOn = jwtToken.ValidTo,
 				IsAuthenticated = true,
 				Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
 				Roles = new List<string> { "User" },
@@ -117,7 +178,25 @@ namespace Fashion.Services
 			};
 		}
 
-		private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
+        public async Task<bool> RevokeRefreshToken(string refreshToken)
+        {
+            var user = await _userManager.Users.SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+
+			if (user == null)
+				return false;
+
+            var token = user.RefreshTokens.Single(r => r.Token == refreshToken);
+
+			if (!token.IsActive)
+				return false;
+
+            token.RevokedOn = DateTime.UtcNow;
+			await _userManager.UpdateAsync(user);
+
+			return true;      
+        }
+
+        private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
 		{
 			var userClaims = await _userManager.GetClaimsAsync(user);
 			var roles = await _userManager.GetRolesAsync(user);
@@ -147,6 +226,21 @@ namespace Fashion.Services
 				signingCredentials: signingCredentials);
 
 			return jwtSecurityToken;
+		}
+
+		private RefreshToken GenerateRefreshToken()
+		{
+			var randomNumber = new byte[32];
+			using var generator = new RNGCryptoServiceProvider();
+
+			generator.GetBytes(randomNumber);
+
+			return new RefreshToken
+			{
+				Token = Convert.ToBase64String(randomNumber),
+				ExpiresOn = DateTime.UtcNow.AddDays(10),
+				CreatedOn = DateTime.UtcNow
+			};
 		}
 	}
 }
